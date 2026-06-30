@@ -19,3 +19,5 @@ function generateRefreshToken(userId: string) {
 
   return jwt.sign(payload, secret, options);
 }
+
+export { generateAccessToken, generateRefreshToken };
