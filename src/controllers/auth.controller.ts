@@ -5,6 +5,8 @@ import User from "../models/User";
 import asyncHandler from "../utils/asyncHandler";
 import { sendSuccess, sendError } from "../utils/apiResponse";
 import { generateAccessToken, generateRefreshToken } from "../utils/jwt";
+import { sanitizeUser } from "../utils/sanitizeUser";
+import { refreshTokenCookieOptions } from "../utils/cookieOptions";
 
 const register = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -30,14 +32,7 @@ const register = asyncHandler(
       );
     }
 
-    const safeUser = {
-      _id: newUser._id,
-      name: newUser.name,
-      email: newUser.email,
-      role: newUser.role,
-      avatar: newUser.avatar,
-      isVerified: newUser.isVerified,
-    };
+    const safeUser = sanitizeUser(newUser);
 
     const accessToken = generateAccessToken(safeUser._id.toString());
     const refreshToken = generateRefreshToken(safeUser._id.toString());
@@ -45,14 +40,7 @@ const register = asyncHandler(
     newUser.refreshToken = refreshToken;
     await newUser.save();
 
-    const options: CookieOptions = {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict" as const,
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    };
-
-    res.cookie("refreshToken", refreshToken, options);
+    res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
 
     return sendSuccess(res, 201, "User created successfully", {
       user: safeUser,
@@ -61,4 +49,41 @@ const register = asyncHandler(
   },
 );
 
-export { register };
+const login = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return sendError(res, 400, "All fields are required");
+    }
+
+    const existingUser = await User.findOne({ email }).select("+password");
+
+    if (!existingUser) {
+      return sendError(res, 401, "Invalid credentials");
+    }
+
+    const isPasswordCorrect = await existingUser.comparePassword(password);
+
+    if (!isPasswordCorrect) {
+      return sendError(res, 401, "Invalid credentials");
+    }
+
+    const accessToken = generateAccessToken(existingUser._id.toString());
+    const refreshToken = generateRefreshToken(existingUser._id.toString());
+
+    existingUser.refreshToken = refreshToken;
+    await existingUser.save();
+
+    res.cookie("refreshToken", refreshToken, refreshTokenCookieOptions);
+
+    const safeUser = sanitizeUser(existingUser);
+
+    return sendSuccess(res, 200, "User login successful", {
+      user: safeUser,
+      accessToken,
+    });
+  },
+);
+
+export { register, login };
