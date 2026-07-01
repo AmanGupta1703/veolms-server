@@ -26,6 +26,10 @@ app.get("/api/health", (req, res) => {
   res.json({ success: true, message: "Server is running" });
 });
 
+import authRoutes from "./routes/auth.routes";
+
+app.use("/api/v1/auth", authRoutes);
+
 app.use(errorHandler);
 
 export default app;
