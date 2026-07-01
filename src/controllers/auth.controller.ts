@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction, CookieOptions } from "express";
+import jwt from "jsonwebtoken";
 
 import User from "../models/User";
 
@@ -86,4 +87,67 @@ const login = asyncHandler(
   },
 );
 
-export { register, login };
+const logout = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const user = req?.user;
+
+    if (!user) {
+      return sendError(res, 401, "Authentication required.");
+    }
+
+    res.clearCookie("refreshToken", refreshTokenCookieOptions);
+
+    await User.findOneAndUpdate(
+      { _id: user._id },
+      { $set: { refreshToken: null } },
+    );
+
+    return sendSuccess(res, 200, "User log out successful");
+  },
+);
+
+const refreshAccessToken = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+      return sendError(res, 401, "Invalid or missing refresh token.");
+    }
+
+    try {
+      const decodedToken = jwt.verify(
+        refreshToken,
+        process.env.JWT_REFRESH_SECRET as string,
+      ) as { _id: string };
+
+      const user = await User.findById(decodedToken._id).select(
+        "+refreshToken",
+      );
+
+      if (!user) {
+        return sendError(res, 401, "Invalid token");
+      }
+
+      if (user.refreshToken !== refreshToken) {
+        return sendError(
+          res,
+          401,
+          "Refresh token is invalid or has been revoked",
+        );
+      }
+
+      const accessToken = generateAccessToken(user._id.toString());
+
+      return sendSuccess(res, 200, "New access token generated successfully", {
+        accessToken,
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        console.log(`[ERROR] : ${error.name} - ${error.message}`);
+      }
+      return sendError(res, 401, "Invalid token.");
+    }
+  },
+);
+
+export { register, login, logout, refreshAccessToken };
