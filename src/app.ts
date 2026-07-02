@@ -27,8 +27,15 @@ app.get("/api/health", (req, res) => {
 });
 
 import authRoutes from "./routes/auth.routes";
+import courseRoutes from "./routes/course.routes";
+import sectionRoutes from "./routes/section.routes";
+import lessonRoutes from "./routes/lesson.routes";
 
 app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/auth", authRoutes);
+app.use("/api/v1/courses", courseRoutes);
+app.use("/api/v1/sections", sectionRoutes);
+app.use("/api/v1/lessons", lessonRoutes);
 
 app.use(errorHandler);
 
