@@ -68,6 +68,8 @@ const courseSchema = new Schema<ICourse>(
   },
 );
 
+courseSchema.index({ title: "text", description: "text" });
+
 courseSchema.pre("save", function () {
   if (!this.isModified("title")) return;
   const base = this.title.toLowerCase().replace(/\s+/g, "-");
