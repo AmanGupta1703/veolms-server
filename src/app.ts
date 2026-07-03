@@ -22,7 +22,7 @@ if (process.env.NODE_ENV === "development") {
   app.use(morgan("dev"));
 }
 
-app.get("/api/health", (req, res) => {
+app.get("/api/v1/health", (req, res) => {
   res.json({ success: true, message: "Server is running" });
 });
 
@@ -43,7 +43,7 @@ app.use("/api/v1/lessons", lessonRoutes);
 app.use("/api/v1/payments", paymentRoutes);
 app.use("/api/v1/enrollments", enrollmentRoutes);
 app.use("/api/v1/progress", progressRoutes);
-app.use("/api/admin", adminRoutes);
+app.use("/api/v1/admin", adminRoutes);
 
 app.use(errorHandler);
 
