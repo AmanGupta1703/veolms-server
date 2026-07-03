@@ -3,6 +3,7 @@ import asyncHandler from "../utils/asyncHandler";
 import { sendError, sendSuccess } from "../utils/apiResponse";
 import Section from "../models/Section";
 import Lesson from "../models/Lesson";
+import Enrollment from "../models/Enrollment";
 
 const createLesson = asyncHandler(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -63,7 +64,44 @@ const deleteLesson = asyncHandler(
 );
 
 const getLessonForStudent = asyncHandler(
-  async (req: Request, res: Response, next: NextFunction) => {},
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+
+    const lesson = await Lesson.findById(id);
+
+    if (!lesson) {
+      return sendError(res, 404, "No lesson found.");
+    }
+
+    if (lesson.isPreview) {
+      return sendSuccess(res, 200, "Preview lesson fetched successfully", {
+        lesson,
+      });
+    }
+
+    const section = await Section.findById(lesson.section);
+
+    if (!section) {
+      return sendError(res, 404, "No section found.");
+    }
+
+    const isStudentEnrolled = await Enrollment.findOne({
+      student: req!.user!._id,
+      course: section.course,
+    });
+
+    if (isStudentEnrolled) {
+      return sendSuccess(res, 200, "Preview lesson fetched successfully", {
+        lesson,
+      });
+    }
+
+    return sendError(
+      res,
+      403,
+      "You are not enrolled in this course. Please enroll to access this video.",
+    );
+  },
 );
 
 export { createLesson, updateLesson, deleteLesson, getLessonForStudent };
