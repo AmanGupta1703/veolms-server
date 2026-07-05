@@ -14,7 +14,7 @@ const getAllCourses = asyncHandler(
 
     if (category) query.category = category;
     if (level) query.level = level;
-    if (search) query.title = { $text: { $search: search } };
+    if (search) query.$text = { $search: String(search) };
 
     const courses = await Course.find(query).populate(
       "instructor",
